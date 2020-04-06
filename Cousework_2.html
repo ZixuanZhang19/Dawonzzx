@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Average Commute Time And Methods By States In Unites States</title>
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="http://d3js.org/colorbrewer.v1.js"></script>
+    <style type="text/css">
+        /* on mouse hover, lighten state color */
+        path:hover {
+            fill-opacity: 0.7;
+        }
+
+        /*style for custom tooltop*/
+        div.tooltip{
+            position: absolute;
+            text-align: center;
+            width: 79px;
+            height: 39px;
+            padding: 2px;
+            font:12px sans-serif;
+            background: white;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        /*legend font style*/
+        body{
+            font:11px sans-serif;
+        }
+
+        /*legend Position style */
+        .legend {
+            position: absolute;
+            left: 800px;
+            top:350px;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 17px;
+        }
+        p.pie-description {
+            margin-bottom: 0;
+        }
+
+        .how_you_did
+        {
+            margin: auto !important;
+            left: 0 !important;
+            width: auto !important;
+            padding: 0 0 0 0 !important;
+            max-width: 662px;
+        }
+
+    </style>
+</head>
+<div>
+    <div id="resizeDiv" style="height:100px;width:100px;border:1px "></div>
+
+    <div  class="container">
+        <div class="row">
+        <h1 style="text-align:center;font-size:26px;font-family: sans-serif;color:#656565">Average Commute Time And Commute Mode Choices
+            <br/>By State In Unites States
+        </h1>
+
+        <p style="font-family:serif;font-size:15px;text-align:center;color:#939391">Student Number: 1917177
+            <br/>Name: Zixuan Zhang
+        </p>
+    </div>
+    <div class="card" style="color:#656565">
+        <p style="font-family:serif;font-size:18px;padding-left: 6em;padding-right: 6em;" class="margin">
+            With the great change of urban physical space and social space,
+            residence and employment are considered as two essential elements of urban spatial structure.
+            The commuting behavior of urban residents directly links both components.
+            Therefore, commuting has become a key point to study the development and change of urban spatial structure.
+            The commuting behavior is characterized by commute time, distance, and method.
+            Based on the data of the past 5 years, we can analyze and explore the relationship between
+            urban development and commuting behavior through the chart comparison in order to find the
+            influencing factors on the development of different regions in United States.
+            <br/>
+            <br/>
+            <b>Commute time</b> to work refers to the total number of minutes that it usually took the person to get from home
+            to work each day during the reference week.
+            The elapsed time includes time spent waiting for public transportation,
+            picking up passengers in carpools, and time spent in other activities related to getting to work.
+            <br/>
+            This Fact is based on data collected in the American Community Survey (ACS) and
+            the Puerto Rico Community Survey (PRCS) conducted annually by the U.S. Census Bureau.
+            A sample of over 3.5 million housing unit addresses is interviewed each year over a 12 month period.
+
+</div>
+<body>
+<svg width="1200" height="490">
+    <g id="mapLayer"></g>
+</svg>
+<script type="text/javascript">
+    async function choropleth() {
+        let svg = d3.select("svg");
+        let width = parseInt(svg.attr("width"));
+        let height = parseInt(svg.attr("height"));
+
+        // Append Div for tooltip to SVG
+        let div = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        let projection = d3.geoAlbersUsa()
+            .translate([width / 2, height / 2])
+            .scale([700]);
+
+        let path = d3.geoPath()
+            .projection(projection);
+
+        // Define a quantized scale to sort data values into buckets of color
+        let color = d3.scaleQuantize()
+            .range(["#d1e9e9",
+                "#b3d9d9",
+                "#95caca",
+                "#81c0c0",
+                "#5cadad",
+                "#408080",
+                "#336666",
+                "#2F4F4F"
+            ]);
+
+        let color1=["#d1e9e9", "#b3d9d9", "#95caca", "#81c0c0", "#5cadad", "#408080", "#336666", "#2F4F4F"];
+        let legendText=["17-18","18-20","20-22","22-24","24-26","26-28","28-31","31-33"];
+
+        // Load in GeoJSON data
+        let json = await d3.json("https://raw.githubusercontent.com/ZixuanZhang19/Dawonzzx/master/us-states.json");
+
+
+        // Load in the agriculture data;
+        let stateData = await d3.csv("https://raw.githubusercontent.com/ZixuanZhang19/Dawonzzx/master/us-traveltime.csv");
+
+        console.log(stateData);
+
+        // Set input domain for color scale based on the min and max
+        color.domain([
+            d3.min(stateData, function (d) {
+                return d.value;
+            }),
+            d3.max(stateData, function (d) {
+                return d.value;
+            })
+        ]);
+
+        // Convert the data array to an object, so that it's easy to look up
+        // data values by state names
+        let dataLookup = {};
+        stateData.forEach(function (stateRow) {
+            // d3.csv will read the values as strings; we need to convert them to floats
+            dataLookup[stateRow.state] = parseFloat(stateRow.value);
+        });
+
+        // Now we add the data values to the geometry for every state
+
+        json.features.forEach(function (feature) {
+            feature.properties.value = dataLookup[feature.properties.name];
+        });
+
+        console.log(json.features);
+
+        // Bind data and create one path per GeoJSON feature
+        d3.select("#mapLayer").selectAll("path")
+            .data(json.features)
+            .join("path")
+            // here we use the familiar d attribute again to define the path
+            .attr("d", path)
+            .style("fill", function (d) {
+                return color(d.properties.value);
+            })
+        .style("stroke","#fff")
+        .style("stroke-width","1")
+        .on("mouseover",function(d){
+            div.transition()
+            .duration(100)
+            .style("opacity",0.9);
+            div.text([d.properties.name+" "+d.properties.value])
+                .style("font-family","Times New Roman")
+            .style("left",(d3.event.pageX)+"px")
+            .style("top",(d3.event.pageY-19)+"px");
+        })
+        .on("mouseout",function (d) {
+            div.transition()
+            .duration(500)
+            .style("opacity",0);
+        });
+
+        let legend = d3.select("body").select("svg")
+        .append("svg")
+            .attr("class", "legend")
+            .attr("x",1000)
+            .attr("y",300)
+            .attr("width", 140)
+            .attr("height", 200)
+            .selectAll("g")
+            .data(color1)
+            .enter()
+            .append("g")
+            .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+        legend.append("rect")
+            .attr("width", 18)
+            .attr("height", 18)
+            .style("fill", function (d,i) {
+                return color1[i];
+            });
+
+        legend.append("text")
+            .data(legendText)
+            .attr("x", 24)
+            .attr("y", 9)
+            .attr("dy", ".35em")
+            .style("font-family","Times New Roman")
+            .text(function(d) { return d; });
+
+
+    }
+    choropleth();
+</script>
+<div>
+    <p style="font-family:serif;font-size:15px;" id="inflation" class="margin">
+    </p>
+
+    <p style="font-family:Times New Roman;font-size:8px;text-align:center;"  class="italic">
+        Figure 1: Average Commute Time by State of United States In 2014-2018
+        <br/>
+        Source: U.S. Census Bureau, American Community Survey (ACS) and Puerto Rico Community Survey (PRCS), 5-Year Estimates.
+    </p>
+    <p style="color:#656565;font-family:serif;font-size:18px;padding-right: 6em;padding-left: 6em;" class="margin">
+        From Figure 1, it is shown that the more prosperous areas,
+        such as New York, Washington, and California, the longer the average commute time.
+        People who live in the Midwest of the United States have shorter commuting times.
+        It can be considered that commuting distance reflects urban expansion,
+        commuting time reflects urban traffic,
+        and the interaction of these two variables results in changes in commuting time.
+        <br/>
+        <br/>
+        <b>Commute mode choice</b>, also known as commute mode share,
+        refers to the mode of transportation that a commuter uses to travel to work,
+        such as driving alone, biking, carpooling or taking transit.
+        The below figure shows the percentage of different commute mode choice from workers age 16 years and over by state in United States.
+        The commute mode choices contain Car,trunk or van-carpooled, Car,trunk or van-drove alone, Public Transportation,
+        Walked, Taxi,bicycle or other means, Worked at home. And all states are classified according to the regions of the United States.
+        <br/>
+
+    </p>
+
+
+</div>
+<svg id="chart"></svg>
+
+<select id="sort-select">
+
+    <option selected value="carpooled">Car,trunk or van-carpooled</option>
+    <option selected value="public">Public Transportation</option>
+    <option selected value="walked">Walked</option>
+    <option selected value="taxi">Taxi,bicycle or other means</option>
+    <option selected value="athome">Worked at home</option>
+    <option selected value="alone">Car,trunk or van-drove alone</option>
+
+</select>
+</body>
+<script >
+    var data = [
+        {state: "Alabama",region:"South",alone:86.4,carpooled:8.5,public:0.5,walked:1,taxi:1,athome:2.3},
+        {state:"Alaska" ,region:"West", alone:66.7,carpooled:13,public:1.8,walked:8.8,taxi:5.4,athome:4.3},
+        {state: "Arizona",region:"West", alone:76.3,carpooled:11,public:2.4,walked:2.1,taxi:2.8,athome:5.5},
+        {state:"Arkansas" ,region:"South", alone:83.4,carpooled:10.1,public:0.5,walked:1.7,taxi:1.5,athome:2.8},
+        {state:"California" ,region:"West", alone:73.2,carpooled:10.9,public:5.3,walked:2.7,taxi:2.6,athome:5.2},
+        {state:"Colorado" ,region:"West", alone:74.4,carpooled:9.7,public:3.3,walked:2.9,taxi:2.5,athome:6.9},
+        {state:"Connecticut" ,region:"Northeast", alone:77.9,carpooled:8.3,public:5.1,walked:3.1,taxi:1.2,athome:4.3},
+        {state:"Delaware" ,region:"South", alone:80.3,carpooled:9.1,public:3.5,walked:2.1,taxi:1.2,athome:3.7},
+        {state:"District of Columbia" , region:"West",alone:32.2,carpooled:5.3,public:38.5,walked:13.6,taxi:5.9,athome:4.4},
+        {state:"Florida" ,region:"South", alone:79.6,carpooled:9.4,public:2.1,walked:1.5,taxi:2.2,athome:5.1},
+        {state:"Georgia" ,region:"South", alone:79.6,carpooled:10.3,public:2.1,walked:1.5,taxi:2.2,athome:5.1},
+        {state:"Hawaii" , region:"West",alone:67.6,carpooled:13.5,public:6.1,walked:4.2,taxi:4.2,athome:4.4},
+        {state: "Idaho",region:"West", alone:78.8,carpooled:9.6,public:0.7,walked:3.1,taxi:2.3,athome:5.5},
+        {state:"Illinois" ,region:"Midwest", alone:73.6,carpooled:8.3,public:9.1,walked:3.1,taxi:1.6,athome:4.2},
+        {state:"Indiana" , region:"Midwest",alone:83,carpooled:8.8,public:1.2,walked:2,taxi:1.7,athome:3.3},
+        {state:"Iowa" , region:"Midwest",alone:80.9,carpooled:8.6,public:1.1,walked:3.7,taxi:1.6,athome:4.2},
+        {state:"Kansas" ,region:"Midwest", alone:82.4,carpooled:9.1,public:0.5,walked:2.5,taxi:1.5,athome:4},
+        {state:"Kentucky" ,region:"South", alone:82.8,carpooled:9.6,public:1.1,walked:2.3,taxi:1.2,athome:3.2},
+        {state:"Louisiana" ,region:"South", alone:82.6,carpooled:9.6,public:1.3,walked:1.7,taxi:2.3,athome:2.4},
+        {state:"Maine",region:"Northeast", alone:77.4,carpooled:10.6,public:0.7,walked:3.9,taxi:1.6,athome:5.7},
+        {state:"Maryland" ,region:"South", alone:74.9,carpooled:9,public:9.1,walked:2.4,taxi:1.2,athome:4.2},
+        {state:"Massachusetts",region:"Northeast", alone:71.8,carpooled:7.4,public:9.9,walked:4.8,taxi:1.7,athome:4.4},
+        {state:"Michigan" ,region:"Midwest", alone:82.4,carpooled:8.8,public:1.5,walked:2.2,taxi:1.3,athome:3.8},
+        {state:"Minnesota" , region:"Midwest",alone:78.4,carpooled:8.6,public:3.6,walked:2.9,taxi:1.6,athome:4.9},
+        {state:"Missouri" ,region:"Midwest", alone:84,carpooled:10.3,public:0.4,walked:1.5,taxi:1.7,athome:1.9},
+        {state:"Mississippi" ,region:"South", alone:81.7,carpooled:9.2,public:1.6,walked:2,taxi:1.4,athome:4.1},
+        {state:"Montana" ,region:"West", alone:75.1,carpooled:10.1,public:0.7,walked:5.3,taxi:2.8,athome:6},
+        {state:"North Carolina",region:"South", alone:81.5,carpooled:9.3,public:0.8,walked:2.7,taxi:1.3,athome:4.4},
+        {state: "North Dakota",region:"Midwest", alone:78.4,carpooled:10.5,public:3.4,walked:2.2,taxi:1.9,athome:3.6},
+        {state:"Nebraska" , region:"Midwest",alone:81.2,carpooled:8.1,public:1,walked:3.1,taxi:1.1,athome:5.4},
+        {state:"New Hampshire" ,region:"Northeast", alone:72,carpooled:8,public:11.1,walked:2.9,taxi:2,athome:4},
+        {state:"New Jersey" ,region:"Northeast", alone:79.2,carpooled:10.5,public:1.1,walked:2.3,taxi:2.6,athome:4.4},
+        {state:"New Mexico" ,region:"West", alone:52.8,carpooled:6.9,public:27.9,walked:6.4,taxi:2,athome:4},
+        {state:"Nevada" ,region:"West", alone:81.1,carpooled:10,public:1.1,walked:1.9,taxi:1.3,athome:4.5},
+        {state:"New York" , region:"Northeast",alone:79,carpooled:10.1,public:0.4,walked:4.5,taxi:1.6,athome:4.4},
+        {state:"Ohio", region:"Midwest",alone:83.6,carpooled:7.8,public:1.7,walked:2.2,taxi:1.2,athome:3.5},
+        {state:"Oklahoma" ,region:"South", alone:83.4,carpooled:9.7,public:0.5,walked:1.7,taxi:1.4,athome:3.4},
+        {state:"Oregon" ,region:"West", alone:71.6,carpooled:10.3,public:4.3,walked:4,taxi:3.5,athome:6.3},
+        {state:"Pennsylvania",region:"Northeast", alone:76.8,carpooled:8.3,public:5.6,walked:3.9,taxi:1.5,athome:3.9},
+        {state:"Rhode Island" ,region:"Northeast", alone:80.3,carpooled:8,public:2.7,walked:4.1,taxi:1.8,athome:3.1},
+        {state:"South Carolina" ,region:"South", alone:82.9,carpooled:9,public:0.7,walked:2.5,taxi:1.6,athome:3.3},
+        {state:"South Dakota" ,region:"Midwest", alone:79.9,carpooled:9.2,public:0.3,walked:4.2,taxi:1.4,athome:5.2},
+        {state:"Tennessee" ,region:"South", alone:83.9,carpooled:9.2,public:0.7,walked:1.4,taxi:1.3,athome:3.5},
+        {state:"Texas" ,region:"South", alone:80.2,carpooled:10.7,public:1.6,walked:1.6,taxi:1.8,athome:4.1},
+        {state:"Utah" ,region:"West", alone:76,carpooled:11.8,public:2.3,walked:2.6,taxi:2.1,athome:5.1},
+        {state:"Virginia" ,region:"South", alone:75.4,carpooled:9.7,public:1.2,walked:5.3,taxi:1.6,athome:6.8},
+        {state:"Vermont" , region:"Northeast",alone:77.4,carpooled:9.4,public:4.4,walked:2.5,taxi:1.8,athome:4.5},
+        {state:"Washington" ,region:"West", alone:72.7,carpooled:10.1,public:6.3,walked:3.5,taxi:2.2,athome:5.3},
+        {state:"Wisconsin",region:"Midwest", alone:81.5,carpooled:10.8,public:0.7,walked:2.8,taxi:1.2,athome:3.1},
+        {state:"West Virginia",region:"South", alone:80.5,carpooled:8.2,public:2,walked:3.5,taxi:1.7,athome:4.1},
+        {state:"Wyoming" ,region:"West", alone:77.1,carpooled:10.8,public:1.5,walked:4.6,taxi:2.3,athome:3.7}];
+
+    console.log(data);
+
+    let types = ["West", "Midwest", "Northeast","South"];
+    // a max with an accessor function
+    let max = d3.max(data, d => d.alone);
+
+    let margin = {top: 20, right: 30, bottom: 30, left: 40};
+    let width = 1200 - margin.left - margin.right;
+    let height = 1200 - margin.top - margin.bottom;
+
+    let svg1 = d3.select("#chart")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        // here we create a master <g> element and move everything by the margins
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // space for the labels
+    let textWidth = 80;
+
+    let xScale1 = d3.scaleLinear()
+        .domain([0, max])
+        .range([0, width - textWidth])
+        .nice();
+
+    let animationDuration = 2000;
+
+    let colorScale = d3.scaleOrdinal()
+        .domain(types)
+        .range([ "#95caca",  "#5cadad", "#408080",  "#2F4F4F"]);
+    let color2=[ "#95caca",  "#5cadad", "#408080",  "#2F4F4F"];
+
+
+    let yScale1 = d3.scaleBand()
+        .range([0, height]).padding(.1);
+
+    let xAxis1 = d3.axisBottom();
+    xAxis1.scale(xScale1);
+
+
+    svg1.append("g")
+        .classed("axis", true)
+        .attr("transform", `translate(${textWidth},${height})`)
+        .call(xAxis1);
+
+    let mlegend = svg1.append("svg")
+        .attr("class", "legend")
+        .attr("x",1060)
+        .attr("y",1000)
+        .attr("width", 140)
+        .attr("height", 200)
+        .selectAll("g")
+        .data(color2)
+        .enter()
+        .append("g")
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+    mlegend.append("rect")
+        .attr("width", 18)
+        .attr("height", 18)
+        .style("fill", function (d,i) {
+            return color2[i];
+        });
+
+    mlegend.append("text")
+        .data(types)
+        .attr("x", 24)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+        .text(function(d) { return d; });
+
+    execute = function () {
+        yScale1.domain(data.map(d => d.state));
+
+        let barGroups = svg1.selectAll(".barGroup")
+            .data(data, function (d) {
+                return d.state;
+            });
+        let barGroupsEnter = barGroups.enter()
+            // we package each data item into a g
+            .append("g")
+            .classed("barGroup", true)
+            .attr("transform", d => `translate(0, ${yScale1(d.state)})`);
+
+        // entering with transparent text and rects of width 0
+        barGroupsEnter.append("text")
+            .attr("opacity", 0);
+        barGroupsEnter.append("rect")
+            .attr("width", 0);
+
+        barGroups.exit().remove();
+
+        barGroups = barGroups.merge(barGroupsEnter);
+
+        barGroups.select("text")
+            .text(d => d.state)
+            .attr("x", textWidth - 10)
+            .attr("dy", yScale1.bandwidth() / 2)
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .transition().duration(animationDuration)
+            .attr("opacity", 1);
+
+        barGroups.select("rect")
+            .attr("x", textWidth)
+            .attr("height", yScale1.bandwidth())
+            .style("fill", function (d) {
+                return colorScale(d.region);
+            })
+            .transition().duration(animationDuration)
+            .attr("width", function (d) {
+                return xScale1(d.alone);
+            });
+
+        barGroups.transition().duration(animationDuration)
+            .attr("transform", function (d) {
+                return `translate(0, ${yScale1(d.state)})`;
+            });
+        barGroups.select("rect")
+            .on("mouseover",function (d,i) {
+                d3.select(this).attr("class","highlight");
+                d3.select(this).transition().duration(400)
+                    .attr("width",function (d) {
+                        return xScale1(d.alone)+5;}
+                    );
+                svg1.append("text")
+                    .attr('class', 'val')
+                    .attr('x', xScale1(d.alone)+100)
+
+                    .attr('y', function() {
+                        return yScale1(d.state) + 15;
+                    })
+                    .text(function() {
+                        return [ d.alone];
+                    })
+                    .attr("font-size", "12px")
+                    .attr("font-family", "Monospace");
+            })
+            .on("mouseout",function (d,i) {
+                d3.select(this).transition().duration(100)
+                    .attr("x", textWidth)
+                    .attr("height", yScale1.bandwidth())
+                    .style("fill", function (d) {
+                        return colorScale(d.region);
+                    })
+                    .transition().duration(animationDuration)
+                    .attr("width", function (d) {
+                        // here we call the scale function.
+                        return xScale1(d.alone);
+                    });
+                d3.selectAll('.val').remove();
+            });
+    };
+
+    execute2 = function () {
+        yScale1.domain(data.map(d => d.state));
+
+        let barGroups = svg1.selectAll(".barGroup")
+
+            .data(data, function (d) {
+                return d.state;
+            });
+
+        let barGroupsEnter = barGroups.enter()
+            // we package each data item into a g
+            .append("g")
+            .classed("barGroup", true)
+            .attr("transform", d => `translate(0, ${yScale1(d.state)})`);
+
+        barGroupsEnter.append("text")
+            .attr("opacity", 0);
+        barGroupsEnter.append("rect")
+            .attr("width", 0);
+
+        barGroups.exit().remove();
+
+        barGroups = barGroups.merge(barGroupsEnter);
+
+        barGroups.select("text")
+            .text(d => d.state)
+            .attr("x", textWidth - 10)
+            .attr("dy", yScale1.bandwidth() / 2)
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .transition().duration(animationDuration)
+            .attr("opacity", 1);
+
+        barGroups.select("rect")
+            .attr("x", textWidth)
+            .attr("height", yScale1.bandwidth())
+            .style("fill", function (d) {
+                return colorScale(d.region);
+            })
+            .transition().duration(animationDuration)
+            .attr("width", function (d) {
+                // here we call the scale function.
+                return xScale1(d.carpooled);
+            });
+
+        barGroups.transition().duration(animationDuration)
+            .attr("transform", function (d) {
+                return `translate(0, ${yScale1(d.state)})`;
+            });
+        barGroups.select("rect")
+            .on("mouseover",function (d,i) {
+                d3.select(this).attr("class","highlight");
+                d3.select(this).transition().duration(400)
+                    .attr("width",function (d) {
+                        return xScale1(d.carpooled)+5;}
+                    );
+                svg1.append("text")
+                    .attr('class', 'val')
+                    .attr('x', xScale1(d.carpooled)+100)
+
+                    .attr('y', function() {
+                        return yScale1(d.state) + 15;
+                    })
+                    .text(function() {
+                        return [ d.carpooled];
+                    })
+                    .attr("font-size", "12px")
+                    .attr("font-family", "Monospace");
+            })
+            .on("mouseout",function (d,i) {
+                d3.select(this).transition().duration(100)
+                    .attr("x", textWidth)
+                    .attr("height", yScale1.bandwidth())
+                    .style("fill", function (d) {
+                        return colorScale(d.region);
+                    })
+                    .transition().duration(animationDuration)
+                    .attr("width", function (d) {
+                        // here we call the scale function.
+                        return xScale1(d.carpooled);
+                    });
+                d3.selectAll('.val').remove();
+            });
+    };
+    execute3 = function () {
+        yScale1.domain(data.map(d => d.state));
+
+        let barGroups = svg1.selectAll(".barGroup")
+            .data(data, function (d) {
+                return d.state;
+            });
+        let barGroupsEnter = barGroups.enter()
+            .append("g")
+            .classed("barGroup", true)
+            .attr("transform", d => `translate(0, ${yScale1(d.state)})`);
+
+        barGroupsEnter.append("text")
+            .attr("opacity", 0);
+        barGroupsEnter.append("rect")
+            .attr("width", 0);
+
+        barGroups.exit().remove();
+
+        barGroups = barGroups.merge(barGroupsEnter);
+
+        barGroups.select("text")
+            .text(d => d.state)
+            .attr("x", textWidth - 10)
+            .attr("dy", yScale1.bandwidth() / 2)
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .transition().duration(animationDuration)
+            .attr("opacity", 1);
+
+        barGroups.select("rect")
+            .attr("x", textWidth)
+            .attr("height", yScale1.bandwidth())
+            .style("fill", function (d) {
+                return colorScale(d.region);
+            })
+            .transition().duration(animationDuration)
+            .attr("width", function (d) {
+                return xScale1(d.public);
+            });
+
+        barGroups.transition().duration(animationDuration)
+            .attr("transform", function (d) {
+                return `translate(0, ${yScale1(d.state)})`;
+            });
+        barGroups.select("rect")
+            .on("mouseover",function (d,i) {
+                d3.select(this).attr("class","highlight");
+                d3.select(this).transition().duration(400)
+                    .attr("width",function (d) {
+                        return xScale1(d.public)+5;}
+                    );
+                svg1.append("text")
+                    .attr('class', 'val')
+                    .attr('x', xScale1(d.public)+100)
+
+                    .attr('y', function() {
+                        return yScale1(d.state) + 15;
+                    })
+                    .text(function() {
+                        return [ d.public];
+                    })
+                    .attr("font-size", "12px")
+                    .attr("font-family", "Monospace");
+            })
+            .on("mouseout",function (d,i) {
+                d3.select(this).transition().duration(100)
+                    .attr("x", textWidth)
+                    .attr("height", yScale1.bandwidth())
+                    .style("fill", function (d) {
+                        return colorScale(d.region);
+                    })
+                    .transition().duration(animationDuration)
+                    .attr("width", function (d) {
+                        // here we call the scale function.
+                        return xScale1(d.public);
+                    });
+                d3.selectAll('.val').remove();
+            });
+    };
+    execute4 = function () {
+        yScale1.domain(data.map(d => d.state));
+
+        let barGroups = svg1.selectAll(".barGroup")
+            .data(data, function (d) {
+                return d.state;
+            });
+        let barGroupsEnter = barGroups.enter()
+            .append("g")
+            .classed("barGroup", true)
+            .attr("transform", d => `translate(0, ${yScale1(d.state)})`);
+
+        barGroupsEnter.append("text")
+            .attr("opacity", 0);
+        barGroupsEnter.append("rect")
+            .attr("width", 0);
+
+        barGroups.exit().remove();
+
+        barGroups = barGroups.merge(barGroupsEnter);
+
+        barGroups.select("text")
+            .text(d => d.state)
+            .attr("x", textWidth - 10)
+            .attr("dy", yScale1.bandwidth() / 2)
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .transition().duration(animationDuration)
+            .attr("opacity", 1);
+
+        barGroups.select("rect")
+            .attr("x", textWidth)
+            .attr("height", yScale1.bandwidth())
+            .style("fill", function (d) {
+                return colorScale(d.region);
+            })
+            .transition().duration(animationDuration)
+            .attr("width", function (d) {
+                return xScale1(d.walked);
+            });
+
+        barGroups.transition().duration(animationDuration)
+            .attr("transform", function (d) {
+                return `translate(0, ${yScale1(d.state)})`;
+            });
+        barGroups.select("rect")
+            .on("mouseover",function (d,i) {
+                d3.select(this).attr("class","highlight");
+                d3.select(this).transition().duration(400)
+                    .attr("width",function (d) {
+                        return xScale1(d.walked)+5;}
+                    );
+                svg1.append("text")
+                    .attr('class', 'val')
+                    .attr('x', xScale1(d.walked)+100)
+
+                    .attr('y', function() {
+                        return yScale1(d.state) + 15;
+                    })
+                    .text(function() {
+                        return [ d.walked];
+                    })
+                    .attr("font-size", "12px")
+                    .attr("font-family", "Monospace");
+            })
+            .on("mouseout",function (d,i) {
+                d3.select(this).transition().duration(100)
+                    .attr("x", textWidth)
+                    .attr("height", yScale1.bandwidth())
+                    .style("fill", function (d) {
+                        return colorScale(d.region);
+                    })
+                    .transition().duration(animationDuration)
+                    .attr("width", function (d) {
+                        // here we call the scale function.
+                        return xScale1(d.walked);
+                    });
+                d3.selectAll('.val').remove();
+            });
+    };
+    execute5 = function () {
+        yScale1.domain(data.map(d => d.state));
+
+        let barGroups = svg1.selectAll(".barGroup")
+            .data(data, function (d) {
+                return d.state;
+            });
+        let barGroupsEnter = barGroups.enter()
+            .append("g")
+            .classed("barGroup", true)
+            .attr("transform", d => `translate(0, ${yScale1(d.state)})`);
+
+        barGroupsEnter.append("text")
+            .attr("opacity", 0);
+        barGroupsEnter.append("rect")
+            .attr("width", 0);
+
+        barGroups.exit().remove();
+
+        barGroups = barGroups.merge(barGroupsEnter);
+
+        barGroups.select("text")
+            .text(d => d.state)
+            .attr("x", textWidth - 10)
+            .attr("dy", yScale1.bandwidth() / 2)
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .transition().duration(animationDuration)
+            .attr("opacity", 1);
+
+        barGroups.select("rect")
+            .attr("x", textWidth)
+            .attr("height", yScale1.bandwidth())
+            .style("fill", function (d) {
+                return colorScale(d.region);
+            })
+            .transition().duration(animationDuration)
+            .attr("width", function (d) {
+                // here we call the scale function.
+                return xScale1(d.taxi);
+            });
+
+        barGroups.transition().duration(animationDuration)
+            .attr("transform", function (d) {
+                return `translate(0, ${yScale1(d.state)})`;
+            });
+        barGroups.select("rect")
+            .on("mouseover",function (d,i) {
+                d3.select(this).attr("class","highlight");
+                d3.select(this).transition().duration(400)
+                    .attr("width",function (d) {
+                        return xScale1(d.taxi)+5;}
+                    );
+                svg1.append("text")
+                    .attr('class', 'val')
+                    .attr('x', xScale1(d.taxi)+100)
+
+                    .attr('y', function() {
+                        return yScale1(d.state) + 15;
+                    })
+                    .text(function() {
+                        return [ d.taxi];
+                    })
+                    .attr("font-size", "12px")
+                    .attr("font-family", "Monospace");
+            })
+            .on("mouseout",function (d,i) {
+                d3.select(this).transition().duration(100)
+                    .attr("x", textWidth)
+                    .attr("height", yScale1.bandwidth())
+                    .style("fill", function (d) {
+                        return colorScale(d.region);
+                    })
+                    .transition().duration(animationDuration)
+                    .attr("width", function (d) {
+                        // here we call the scale function.
+                        return xScale1(d.taxi);
+                    });
+                d3.selectAll('.val').remove();
+            });
+    };
+    execute6 = function () {
+        yScale1.domain(data.map(d => d.state));
+
+        let barGroups = svg1.selectAll(".barGroup")
+            .data(data, function (d) {
+                return d.state;
+            });
+        let barGroupsEnter = barGroups.enter()
+            .append("g")
+            .classed("barGroup", true)
+            .attr("transform", d => `translate(0, ${yScale1(d.state)})`);
+
+        barGroupsEnter.append("text")
+            .attr("opacity", 0);
+        barGroupsEnter.append("rect")
+            .attr("width", 0);
+
+        barGroups.exit().remove();
+
+        barGroups = barGroups.merge(barGroupsEnter);
+
+        barGroups.select("text")
+            .text(d => d.state)
+            .attr("x", textWidth - 10)
+            .attr("dy", yScale1.bandwidth() / 2)
+            .attr("text-anchor", "end")
+            .attr("alignment-baseline", "middle")
+            .transition().duration(animationDuration)
+            .attr("opacity", 1);
+
+        barGroups.select("rect")
+            .attr("x", textWidth)
+            .attr("height", yScale1.bandwidth())
+            .style("fill", function (d) {
+                return colorScale(d.region);
+            })
+            .transition().duration(animationDuration)
+            .attr("width", function (d) {
+                // here we call the scale function.
+                return xScale1(d.athome);
+            });
+
+        barGroups.transition().duration(animationDuration)
+            .attr("transform", function (d) {
+                return `translate(0, ${yScale1(d.state)})`;
+            });
+
+        barGroups.select("rect")
+        .on("mouseover",function (d,i) {
+            d3.select(this).attr("class","highlight");
+            d3.select(this).transition().duration(400)
+            .attr("width",function (d) {
+                return xScale1(d.athome)+5;}
+                );
+            svg1.append("text")
+                .attr('class', 'val')
+                .attr('x', xScale1(d.athome)+100)
+
+                .attr('y', function() {
+                    return yScale1(d.state) + 15;
+                })
+                .text(function() {
+                    return [ d.athome];
+                })
+                .attr("font-size", "12px")
+                .attr("font-family", "Monospace");
+        })
+        .on("mouseout",function (d,i) {
+            d3.select(this).transition().duration(100)
+                .attr("x", textWidth)
+                .attr("height", yScale1.bandwidth())
+                .style("fill", function (d) {
+                    return colorScale(d.region);
+                })
+                .transition().duration(animationDuration)
+                .attr("width", function (d) {
+                    // here we call the scale function.
+                    return xScale1(d.athome);
+                });
+            d3.selectAll('.val').remove();
+        });
+
+    };
+
+    execute();
+
+    d3.select("#sort-select").on("change", function () {
+        let active = d3.event.target.value;
+        data = data.sort(function (a, b) {
+            switch (active) {
+                case "alone":
+                    return b.alone - a.alone;
+                case "carpooled":
+                    return b.carpooled-a.carpooled;
+                case "public":
+                    return b.public-a.public;
+                case  "walked":
+                    return  b.walked-a.walked;
+                case "taxi":
+                    return b.taxi-a.taxi;
+                case "athome":
+                    return  b.athome-a.athome;
+
+            }
+        });
+
+        var selectoption=d3.select(this).property("value");
+        if (selectoption == 'alone')
+            execute();
+        else if (selectoption == 'carpooled')
+            execute2();
+        else if (selectoption == 'public')
+            execute3();
+        else if (selectoption =='walked')
+            execute4();
+        else if (selectoption == "taxi")
+            execute5();
+        else
+            execute6()
+
+    });
+
+
+
+
+
+</script>
+        <div>
+            <p style="font-family:serif;font-size:15px;" id="inflation" class="margin">
+            </p>
+
+            <p style="font-family:Times New Roman;font-size:8px;text-align:center;"  class="italic">
+                Figure 2: Commute Mode Choice (%) by State of United States In 2013
+                <br/>
+                Source: U.S. Department of Commerce, U.S. Census Bureau, 2013 American Community Survey 1-Year Estimates, available at www.census.gov/acs as of August 2015.
+            </p>
+            <p style="color:#656565;font-family:serif;font-size:18px;padding-right: 6em;padding-left: 6em;" class="margin">
+                From Figure 2, it is shown that all areas of the United States use private cars as the main commuting method,
+                especially in the South Region.
+                Besides, the differences among the regions can be observed from the figure.
+                In the western region, people are more likely to use many methods other than private cars.
+                For example, workers in District of Columbia prefer public transportation, which occupies about 40% of the total.
+                Meanwhile, nearly 15% workers choose walking to work, which ranks the first.
+                <br/>
+                <br/>
+                The <b>limitation </b>is that, the data of commute mode are only from 2013, so it can not make a comparision in time scale,
+                which can not contribute to the study of urban development. Besides, the differences in urban planning and personal preferences,
+                these effects superimpose each other, making the study of commuting time and methods more complicated.
+                <br/>
+                <br/>
+                <b>In conclusion</b>,the first figure clearly shows the average commute time by state in US.
+                In the second chart, the percentage of each commute mode choice by state could be descending order.
+                Overall, the development of cities and transportation has a significant impact on the choice of time and mode of commuting,
+                especially the changes in urban industry may improve the changes in the time and
+                mode of commuting for residents in some specific areas.
+
+                <br/>
+            </p>
+            <p style="font-family:sans-serif;color:#656565;font-size:18px;padding-left: 6em;" class="margin">
+                Literature Resources: </p>
+            <p style="font-family:serif;color:#656565;font-size:15px;padding-left: 7em;padding-right: 7em" class="margin" >
+                D3 tutorial (week 6 and week 7) on <a target="_blank" href="https://keats.kcl.ac.uk/course/view.php?id=67078">KEATS 7CCSMSDV.</a> <a class="warn_error"></a>
+                <br/>
+                Data from:
+                <br/>
+                <a target="_blank" href="https://www.indexmundi.com/facts/united-states/quick-facts/all-states/average-commute-time#map"> U.S. Census Bureau, American Community Survey (ACS) and Puerto Rico Community Survey (PRCS), 5-Year Estimates.</a> <a class="warn_error"></a>
+                <br/>
+                <a target="_blank" href="https://www.bts.gov/content/commuting-work"> Bureau of Transportation Statistics.</a> <a class="warn_error"></a>
+                <br/>
+
+            </p>
+
+
+        </div>
+</html>
